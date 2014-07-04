@@ -1,0 +1,25 @@
+language: python
+python:
+  - "2.6"
+  - "2.7"
+env:
+  # Test against the latest version of Twisted.
+  - TWISTED_VERSION="Twisted"
+matrix:
+  include:
+    # Test against the oldest version of Twisted that we claim to support
+    # This is a separate matrix inclusion to avoid spawning unnecessary builds.
+    - python: "2.7"
+      env: TWISTED_VERSION="Twisted==13.1.0"
+before_install:
+  # we need the protobuf-compiler so Vumi can install Riak client libraries
+  - sudo apt-get install -qq protobuf-compiler
+install:
+  - "pip install ${TWISTED_VERSION}"
+  - "pip install -r requirements.txt --use-wheel"
+  - "pip install coveralls --use-wheel"
+  - "python setup.py install"
+script:
+  - VUMITEST_REDIS_DB=1 coverage run --source=vxaat `which trial` vxaat
+after_success:
+  - coveralls
