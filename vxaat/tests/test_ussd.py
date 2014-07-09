@@ -40,16 +40,15 @@ class TestAatUssdTransport(VumiTestCase):
             'from_addr': self._request_defaults['msisdn'],
         }
         expected_field_values.update(field_values)
-
         for field, expected_value in expected_field_values.iteritems():
             self.assertEqual(msg[field], expected_value)
 
     @inlineCallbacks
     def test_inbound_begin(self):
 
-        # Second connect is the actual start of the session
-        user_content = "He's not dead, he is pining for the fjords"
-        d = self.tx_helper.mk_request('some-suffix', msg=user_content)
+        # Make contact
+        user_content = "Blessed are the cheesemakers!"
+        d = self.tx_helper.mk_request('some-suffix', request=user_content)
         [msg] = yield self.tx_helper.wait_for_dispatched_inbound(1)
 
         self.assert_inbound_message(
