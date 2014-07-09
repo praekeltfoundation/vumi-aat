@@ -37,19 +37,12 @@ class AatUssdTransport(HttpRpcTransport):
         # since the requests from AAT do not provided us with this.
         self.suffix_to_addrs = self.config['suffix_to_addrs']
 
-    @inlineCallbacks
-    def setup_transport(self):
-        super(AatUssdTransport, self).setup_transport()
-
-    @inlineCallbacks
-    def teardown_transport(self):
-        yield super(AatUssdTransport, self).teardown_transport()
 
     @inlineCallbacks
     def handle_raw_inbound_message(self, message_id, request):
         errors = {}
 
-        to_address, to_addr_errors = self.get_to_addr()
+        to_address, to_addr_errors = self.get_to_addr(request)
         errors.update(to_addr_errors)
 
         values, field_value_errors = self.get_field_values(
@@ -61,13 +54,6 @@ class AatUssdTransport(HttpRpcTransport):
         from_address = values['msisdn']
         response = values['request']
 
-        if errors:
-            log.msg('Unhappy incoming message: %s ' % (errors,))
-            yield self.finish_request(
-                message_id, json.dumps(errors), code=http.BAD_REQUEST
-            )
-            return
-
         log.msg('AatUssdTransport receiving inbound message from %s to %s.' %
                 (from_address, to_address))
 
@@ -75,7 +61,7 @@ class AatUssdTransport(HttpRpcTransport):
             message_id=message_id,
             content=response,
             to_addr=to_address,
-            from_address=from_address,
+            from_addr=from_address,
             provider='aat',
             transport_type=self.transport_type
         )
