@@ -54,6 +54,13 @@ class AatUssdTransport(HttpRpcTransport):
         from_address = values['msisdn']
         response = values['request']
 
+        if errors:
+            log.msg('Unhappy incoming message: %s ' % (errors,))
+            yield self.finish_request(
+                message_id, json.dumps(errors), code=http.BAD_REQUEST
+            )
+            return
+
         log.msg('AatUssdTransport receiving inbound message from %s to %s.' %
                 (from_address, to_address))
 
