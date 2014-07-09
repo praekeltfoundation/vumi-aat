@@ -46,14 +46,6 @@ class AatUssdTransport(HttpRpcTransport):
         yield super(AatUssdTransport, self).teardown_transport()
 
     @inlineCallbacks
-    def setup_transport(self):
-        super(AatUssdTransport, self).setup_transport()
-
-    @inlineCallbacks
-    def teardown_transport(self):
-        yield super(AatUssdTransport, self).teardown_transport()
-
-    @inlineCallbacks
     def handle_raw_inbound_message(self, message_id, request):
         errors = {}
 
