@@ -1,14 +1,19 @@
 import json
+from xml.etree.ElementTree import Element, SubElement, tostring
 
 from twisted.internet.defer import inlineCallbacks
 from twisted.python import log
 from twisted.web import http
 
 from vumi.message import TransportUserMessage
+from vumi.config import ConfigText
 from vumi.transports.httprpc import HttpRpcTransport
 
 
-from xml.etree.ElementTree import Element, SubElement, tostring
+class AatUssdTransportConfig(HttpRpcTransport.CONFIG_CLASS):
+    to_addr = ConfigText('The USSD code ',
+                         required=True, static=True)
+
 
 class AatUssdTransport(HttpRpcTransport):
     """
@@ -19,44 +24,18 @@ class AatUssdTransport(HttpRpcTransport):
     EXPECTED_FIELDS = set(['msisdn', 'provider'])
     IGNORE_FIELDS = set(['request'])
 
-    def get_to_addr(self, request):
-        """
-        Extracts the request url path's suffix and uses it to obtain the tag
-        associated with the suffix. Returns a tuple consisting of the tag and
-        a dict of errors encountered.
-        """
-        errors = {}
+    CONFIG_CLASS = AatUssdTransportConfig
 
-        [suffix] = request.postpath
-        tag = self.suffix_to_addrs.get(suffix, None)
-        if tag is None:
-            errors['unknown_suffix'] = suffix
-
-        return tag, errors
-
-    def validate_config(self):
-        super(AatUssdTransport, self).validate_config()
-
-        # Mappings between url suffixes and the tags used as the to_addr for
-        # inbound messages (e.g. shortcodes or longcodes). This is necessary
-        # since the requests from AAT do not provided us with this.
-        self.suffix_to_addrs = self.config['suffix_to_addrs']
-
-        # Base URL
-
-    def get_callback_url(self, request):
-        [suffix] = request.postpath
-        return "%s%s%s" % (
+    def get_callback_url(self):
+        return "%s%s" % (
             self.config['base_url'],
-            self.config['web_path'],
-            suffix)
+            self.config['web_path'])
 
     @inlineCallbacks
     def handle_raw_inbound_message(self, message_id, request):
         errors = {}
 
-        to_address, to_addr_errors = self.get_to_addr(request)
-        errors.update(to_addr_errors)
+        to_address = self.config.get('to_addr')
 
         values, field_value_errors = self.get_field_values(
             request,
@@ -91,12 +70,10 @@ class AatUssdTransport(HttpRpcTransport):
             to_addr=to_address,
             from_addr=from_address,
             session_event=session_event,
-            provider='aat',
             transport_type=self.transport_type,
             transport_metadata={
                 'aat_ussd': {
-                    'provider': provider,
-                    'url': self.get_callback_url(request)
+                    'provider': provider
                 }
             }
         )
@@ -122,14 +99,13 @@ class AatUssdTransport(HttpRpcTransport):
             encoding='utf-8'
         )
 
-
     @inlineCallbacks
     def handle_outbound_message(self, message):
         error = None
         message_id = message['message_id']
         body = self.generate_body(
             message['content'],
-            message['transport_metadata']['aat_ussd']['url']
+            self.get_callback_url()
         )
 
         if message.payload.get('in_reply_to') and 'content' in message.payload:

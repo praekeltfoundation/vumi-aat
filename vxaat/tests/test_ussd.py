@@ -7,29 +7,25 @@ from vxaat.ussd import AatUssdTransport
 
 
 class TestAatUssdTransport(VumiTestCase):
-    _from_addr = '27729042520'
-    _to_addr = '1234'
-    _request_defaults = {
-        'msisdn': _from_addr,
-        'request': "He's not dead, he is pining for the fjords",
-        'provider': 'MTN',
-    }
+
 
     @inlineCallbacks
     def setUp(self):
+        request_defaults = {
+            'msisdn': '27729042520',
+            'request': "He's not dead, he is pining for the fjords",
+            'provider': 'MTN',
+        }
         self.config = {
-            'base_url': "http://www.example.com:42666",
+            'base_url': "http://www.example.com/foo",
             'web_path': '/api/v1/aat/ussd/',
             'web_port': '0',
-            'suffix_to_addrs': {
-                'some-suffix': self._to_addr,
-                'some-more-suffix': '4321'
-            }
+            'to_addr': '1234'
         }
         self.tx_helper = self.add_helper(
             HttpRpcTransportHelper(
                 AatUssdTransport,
-                request_defaults=self._request_defaults
+                request_defaults=request_defaults
             )
         )
         self.transport = yield self.tx_helper.get_transport(self.config)
@@ -39,26 +35,25 @@ class TestAatUssdTransport(VumiTestCase):
 
     def callback_url(self):
         #Not sure if I should reconstruct it here.
-        return "http://www.example.com:42666/api/v1/aat/ussd/some-suffix"
+        return "http://www.example.com/foo/api/v1/aat/ussd/"
 
     def assert_inbound_message(self, msg, **field_values):
         expected_field_values = {
-            'content': self._request_defaults['request'],
+            'content':  self.tx_helper.request_defaults['request'],
             'to_addr': '1234',
-            'from_addr': self._request_defaults['msisdn'],
+            'from_addr': self.tx_helper.request_defaults['msisdn'],
         }
         expected_field_values.update(field_values)
         for field, expected_value in expected_field_values.iteritems():
             self.assertEqual(msg[field], expected_value)
 
     def assert_outbound_message(self, msg, content, callback):
-
-        xml = '<request>' \
-              '<headertext>%s</headertext>' \
-              '<options>' \
-              '<option callback="%s" command="1" display="false" order="1" />' \
-              '</options>' \
-              '</request>' % (content, callback)
+        xml = ('<request>'
+               '<headertext>%s</headertext>'
+               '<options>'
+               '<option callback="%s" command="1" display="false" order="1" />'
+               '</options>'
+               '</request>') % (content, callback)
         self.assertEqual(msg, xml)
 
     @inlineCallbacks
