@@ -33,7 +33,7 @@ class TestAatUssdTransport(VumiTestCase):
         )
 
     def callback_url(self):
-        #Not sure if I should reconstruct it here.
+        # Not sure if I should reconstruct it here.
         return "http://www.example.com/foo/api/v1/aat/ussd/"
 
     def assert_inbound_message(self, msg, **field_values):

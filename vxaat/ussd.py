@@ -13,6 +13,8 @@ from vumi.transports.httprpc import HttpRpcTransport
 class AatUssdTransportConfig(HttpRpcTransport.CONFIG_CLASS):
     to_addr = ConfigText('The USSD code ',
                          required=True, static=True)
+    base_url = ConfigText('The base url of the transport ',
+                          required=True, static=True)
 
 
 class AatUssdTransport(HttpRpcTransport):
@@ -27,15 +29,19 @@ class AatUssdTransport(HttpRpcTransport):
     CONFIG_CLASS = AatUssdTransportConfig
 
     def get_callback_url(self):
+        config = self.get_static_config()
         return "%s%s" % (
-            self.config['base_url'],
-            self.config['web_path'])
+            config.base_url,
+            config.web_path)
+
+    def get_to_addr(self):
+        config = self.get_static_config()
+        return config.to_addr
 
     @inlineCallbacks
     def handle_raw_inbound_message(self, message_id, request):
         errors = {}
-
-        to_address = self.config.get('to_addr')
+        to_address = self.get_to_addr()
 
         values, field_value_errors = self.get_field_values(
             request,
@@ -83,7 +89,7 @@ class AatUssdTransport(HttpRpcTransport):
         headertext = SubElement(request, 'headertext')
         headertext.text = reply
         options = SubElement(request, 'options')
-        option = SubElement(
+        SubElement(
             options,
             'option',
             {
