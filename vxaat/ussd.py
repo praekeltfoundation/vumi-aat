@@ -40,7 +40,7 @@ class AatUssdTransport(HttpRpcTransport):
         values, field_value_errors = self.get_field_values(
             request,
             self.EXPECTED_FIELDS,
-            self.IGNORE_FIELDS
+            self.IGNORE_FIELDS,
         )
         errors.update(field_value_errors)
 

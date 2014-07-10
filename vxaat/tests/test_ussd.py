@@ -8,7 +8,6 @@ from vxaat.ussd import AatUssdTransport
 
 class TestAatUssdTransport(VumiTestCase):
 
-
     @inlineCallbacks
     def setUp(self):
         request_defaults = {
@@ -25,12 +24,12 @@ class TestAatUssdTransport(VumiTestCase):
         self.tx_helper = self.add_helper(
             HttpRpcTransportHelper(
                 AatUssdTransport,
-                request_defaults=request_defaults
+                request_defaults=request_defaults,
             )
         )
         self.transport = yield self.tx_helper.get_transport(self.config)
         self.transport_url = self.transport.get_transport_url(
-            self.config['web_path']
+            self.config['web_path'],
         )
 
     def callback_url(self):
@@ -66,7 +65,7 @@ class TestAatUssdTransport(VumiTestCase):
 
         self.assert_inbound_message(
             msg,
-            content=user_content
+            content=user_content,
         )
 
         reply_content = 'We are the Knights Who Say ... Ni!'
@@ -74,4 +73,8 @@ class TestAatUssdTransport(VumiTestCase):
         self.tx_helper.dispatch_outbound(reply)
         response = yield d
 
-        self.assert_outbound_message(response.delivered_body, reply_content, self.callback_url())
+        self.assert_outbound_message(
+            response.delivered_body,
+            reply_content,
+            self.callback_url(),
+        )
