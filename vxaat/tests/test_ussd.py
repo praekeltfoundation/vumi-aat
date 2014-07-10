@@ -2,8 +2,10 @@ from twisted.internet.defer import inlineCallbacks
 
 from vumi.message import TransportUserMessage
 from vumi.tests.helpers import VumiTestCase
-from vxaat.ussd import AatUssdTransport
 from vumi.transports.httprpc.tests.helpers import HttpRpcTransportHelper
+
+from vxaat.ussd import AatUssdTransport
+
 
 class TestAatUssdTransport(VumiTestCase):
     _from_addr = '27729042520'
@@ -11,12 +13,15 @@ class TestAatUssdTransport(VumiTestCase):
     _request_defaults = {
         'msisdn': _from_addr,
         'request': "He's not dead, he is pining for the fjords",
+        'provider': 'MTN',
     }
 
     @inlineCallbacks
     def setUp(self):
         self.config = {
+            'base_url': "http://www.example.com:42666",
             'web_path': '/api/v1/aat/ussd/',
+            'web_port': '42666',
             'suffix_to_addrs': {
                 'some-suffix': self._to_addr,
                 'some-more-suffix': '4321'
@@ -33,6 +38,9 @@ class TestAatUssdTransport(VumiTestCase):
             self.config['web_path']
         )
 
+    def callback_url(self):
+        return "http://www.example.com:42666/api/v1/aat/ussd/some-suffix"
+
     def assert_inbound_message(self, msg, **field_values):
         expected_field_values = {
             'content': self._request_defaults['request'],
@@ -42,6 +50,16 @@ class TestAatUssdTransport(VumiTestCase):
         expected_field_values.update(field_values)
         for field, expected_value in expected_field_values.iteritems():
             self.assertEqual(msg[field], expected_value)
+
+    def assert_outbound_message(self, msg, content, callback):
+
+        xml = '<request>' \
+              '<headertext>%s</headertext>' \
+              '<options>' \
+              '<option callback="%s" command="1" display="false" order="1" />' \
+              '</options>' \
+              '</request>' % (content, callback)
+        self.assertEqual(msg, xml)
 
     @inlineCallbacks
     def test_inbound_begin(self):
@@ -56,10 +74,9 @@ class TestAatUssdTransport(VumiTestCase):
             content=user_content
         )
 
+        reply_content = 'We are the Knights Who Say ... Ni!'
+        reply = msg.reply(reply_content)
+        self.tx_helper.dispatch_outbound(reply)
         response = yield d
 
-        #reply_content = "We are the Knights Who Say ... Ni!"
-        #reply = msg.reply(reply_content)
-        #self.tx_helper.dispatch_outbound(reply)
-        #response = yield d
-        #self.assertEqual(response.delivered_body, reply_content)
+        self.assert_outbound_message(response.delivered_body, reply_content, self.callback_url())
