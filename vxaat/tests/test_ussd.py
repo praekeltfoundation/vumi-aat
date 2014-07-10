@@ -1,5 +1,6 @@
 from twisted.internet.defer import inlineCallbacks
 
+from vumi.message import TransportUserMessage
 from vumi.tests.helpers import VumiTestCase
 from vumi.transports.httprpc.tests.helpers import HttpRpcTransportHelper
 
@@ -12,7 +13,6 @@ class TestAatUssdTransport(VumiTestCase):
     def setUp(self):
         request_defaults = {
             'msisdn': '27729042520',
-            'request': "He's not dead, he is pining for the fjords",
             'provider': 'MTN',
         }
         self.config = {
@@ -38,7 +38,7 @@ class TestAatUssdTransport(VumiTestCase):
 
     def assert_inbound_message(self, msg, **field_values):
         expected_field_values = {
-            'content':  self.tx_helper.request_defaults['request'],
+            'content':  "",
             'to_addr': '1234',
             'from_addr': self.tx_helper.request_defaults['msisdn'],
         }
@@ -59,13 +59,14 @@ class TestAatUssdTransport(VumiTestCase):
     def test_inbound_begin(self):
 
         # Make contact
-        user_content = "Blessed are the cheesemakers!"
-        d = self.tx_helper.mk_request('some-suffix', request=user_content)
+        user_content = ""
+        d = self.tx_helper.mk_request('')
         [msg] = yield self.tx_helper.wait_for_dispatched_inbound(1)
 
         self.assert_inbound_message(
             msg,
-            content=user_content,
+            session_event=TransportUserMessage.SESSION_NEW,
+            content="",
         )
 
         reply_content = 'We are the Knights Who Say ... Ni!'
