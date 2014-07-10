@@ -106,6 +106,34 @@ class TestAatUssdTransport(VumiTestCase):
         self.assert_ack(ack, reply)
 
     @inlineCallbacks
+    def test_inbound_begin_with_close(self):
+
+        # Send initial request
+        d = self.tx_helper.mk_request('')
+        [msg] = yield self.tx_helper.wait_for_dispatched_inbound(1)
+
+        self.assert_inbound_message(
+            msg,
+            session_event=TransportUserMessage.SESSION_NEW,
+            content="",
+        )
+
+        reply_content = 'We are no longer the Knight who say Ni!'
+        reply = msg.reply(reply_content, continue_session=False)
+        self.tx_helper.dispatch_outbound(reply)
+        response = yield d
+
+        self.assert_outbound_message(
+            response.delivered_body,
+            reply_content,
+            self.callback_url(),
+            continue_session=False,
+        )
+
+        [ack] = yield self.tx_helper.wait_for_dispatched_events(1)
+        self.assert_ack(ack, reply)
+
+    @inlineCallbacks
     def test_inbound_resume_and_reply_with_end(self):
 
         user_content = "I didn't expect a kind of Spanish Inquisition!"
@@ -142,7 +170,7 @@ class TestAatUssdTransport(VumiTestCase):
             msg,
             session_event=TransportUserMessage.SESSION_RESUME,
             content=user_content,
-            )
+        )
 
         reply_content = "We want ... a shrubbery!"
         reply = msg.reply(reply_content, continue_session=True)
