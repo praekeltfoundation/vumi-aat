@@ -58,8 +58,7 @@ class TestAatUssdTransport(VumiTestCase):
     @inlineCallbacks
     def test_inbound_begin(self):
 
-        # Make contact
-        user_content = ""
+        # Send initial request
         d = self.tx_helper.mk_request('')
         [msg] = yield self.tx_helper.wait_for_dispatched_inbound(1)
 
