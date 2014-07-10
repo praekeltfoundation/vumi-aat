@@ -34,14 +34,11 @@ class AatUssdTransport(HttpRpcTransport):
             config.base_url,
             config.web_path)
 
-    def get_to_addr(self):
-        config = self.get_static_config()
-        return config.to_addr
 
     @inlineCallbacks
     def handle_raw_inbound_message(self, message_id, request):
         errors = {}
-        to_address = self.get_to_addr()
+        to_address = self.get_static_config().to_addr
 
         values, field_value_errors = self.get_field_values(
             request,
@@ -84,21 +81,24 @@ class AatUssdTransport(HttpRpcTransport):
             }
         )
 
-    def generate_body(self, reply, callback):
+    def generate_body(self, reply, callback, session_event):
         request = Element('request')
         headertext = SubElement(request, 'headertext')
         headertext.text = reply
-        options = SubElement(request, 'options')
-        SubElement(
-            options,
-            'option',
-            {
-                'command': '1',
-                'order': '1',
-                'callback': callback,
-                'display': "false"
-            }
-        )
+
+        # If this is a SESSION_CLOSE, then do not send options
+        if session_event != TransportUserMessage.SESSION_CLOSE:
+            options = SubElement(request, 'options')
+            SubElement(
+                options,
+                'option',
+                {
+                    'command': '1',
+                    'order': '1',
+                    'callback': callback,
+                    'display': "false"
+                }
+            )
 
         return tostring(
             request,
@@ -111,7 +111,8 @@ class AatUssdTransport(HttpRpcTransport):
         message_id = message['message_id']
         body = self.generate_body(
             message['content'],
-            self.get_callback_url()
+            self.get_callback_url(),
+            message['session_event']
         )
 
         if message.payload.get('in_reply_to') and 'content' in message.payload:
@@ -132,3 +133,4 @@ class AatUssdTransport(HttpRpcTransport):
 
         yield self.publish_ack(user_message_id=message_id,
                                sent_message_id=message_id)
+
