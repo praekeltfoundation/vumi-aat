@@ -1,6 +1,5 @@
 from twisted.internet.defer import inlineCallbacks
 
-from vumi.message import TransportUserMessage
 from vumi.tests.helpers import VumiTestCase
 from vumi.transports.httprpc.tests.helpers import HttpRpcTransportHelper
 
@@ -21,7 +20,7 @@ class TestAatUssdTransport(VumiTestCase):
         self.config = {
             'base_url': "http://www.example.com:42666",
             'web_path': '/api/v1/aat/ussd/',
-            'web_port': '42666',
+            'web_port': '0',
             'suffix_to_addrs': {
                 'some-suffix': self._to_addr,
                 'some-more-suffix': '4321'
@@ -39,6 +38,7 @@ class TestAatUssdTransport(VumiTestCase):
         )
 
     def callback_url(self):
+        #Not sure if I should reconstruct it here.
         return "http://www.example.com:42666/api/v1/aat/ussd/some-suffix"
 
     def assert_inbound_message(self, msg, **field_values):
