@@ -24,7 +24,12 @@ class AatUssdTransport(HttpRpcTransport):
     transport_type = 'ussd'
     ENCODING = 'utf-8'
     EXPECTED_FIELDS = set(['msisdn', 'provider'])
-    IGNORE_FIELDS = set(['request'])
+    OPTIONAL_FIELDS = set(['request'])
+
+    # errors
+    RESPONSE_FAILURE_ERROR = "Response to http request failed."
+    NOT_REPLY_ERROR = "Outbound message is not a reply"
+    NO_CONTENT_ERROR = "Outbound message has no content."
 
     CONFIG_CLASS = AatUssdTransportConfig
 
@@ -34,21 +39,22 @@ class AatUssdTransport(HttpRpcTransport):
             config.base_url,
             config.web_path)
 
-    def get_to_addr(self):
-        config = self.get_static_config()
-        return config.to_addr
-
     @inlineCallbacks
     def handle_raw_inbound_message(self, message_id, request):
-        errors = {}
-        to_address = self.get_to_addr()
+        to_address = self.get_static_config().to_addr
 
-        values, field_value_errors = self.get_field_values(
+        values, errors = self.get_field_values(
             request,
             self.EXPECTED_FIELDS,
-            self.IGNORE_FIELDS,
+            self.OPTIONAL_FIELDS,
         )
-        errors.update(field_value_errors)
+
+        if errors:
+            log.msg('Unhappy incoming message: %s ' % (errors,))
+            yield self.finish_request(
+                message_id, json.dumps(errors), code=http.BAD_REQUEST
+            )
+            return
 
         from_address = values['msisdn']
         provider = values['provider']
@@ -59,13 +65,6 @@ class AatUssdTransport(HttpRpcTransport):
         else:
             response = ""
             session_event = TransportUserMessage.SESSION_NEW
-
-        if errors:
-            log.msg('Unhappy incoming message: %s ' % (errors,))
-            yield self.finish_request(
-                message_id, json.dumps(errors), code=http.BAD_REQUEST
-            )
-            return
 
         log.msg('AatUssdTransport receiving inbound message from %s to %s.' %
                 (from_address, to_address))
@@ -84,21 +83,24 @@ class AatUssdTransport(HttpRpcTransport):
             }
         )
 
-    def generate_body(self, reply, callback):
+    def generate_body(self, reply, callback, session_event):
         request = Element('request')
         headertext = SubElement(request, 'headertext')
         headertext.text = reply
-        options = SubElement(request, 'options')
-        SubElement(
-            options,
-            'option',
-            {
-                'command': '1',
-                'order': '1',
-                'callback': callback,
-                'display': "false"
-            }
-        )
+
+        # If this is not a session close event, then send options
+        if session_event != TransportUserMessage.SESSION_CLOSE:
+            options = SubElement(request, 'options')
+            SubElement(
+                options,
+                'option',
+                {
+                    'command': '1',
+                    'order': '1',
+                    'callback': callback,
+                    'display': "false"
+                }
+            )
 
         return tostring(
             request,
@@ -107,27 +109,31 @@ class AatUssdTransport(HttpRpcTransport):
 
     @inlineCallbacks
     def handle_outbound_message(self, message):
-        error = None
+        # Generate outbound message
         message_id = message['message_id']
         body = self.generate_body(
             message['content'],
-            self.get_callback_url()
+            self.get_callback_url(),
+            message['session_event']
         )
 
-        if message.payload.get('in_reply_to') and 'content' in message.payload:
+        # Errors
+        if not message['content']:
+            yield self.publish_nack(message_id, self.NO_CONTENT_ERROR)
+            return
+        if not message['in_reply_to']:
+            yield self.publish_nack(message_id, self.NOT_REPLY_ERROR)
+            return
 
-            response_id = self.finish_request(
-                message['in_reply_to'],
-                body.encode(self.ENCODING),
-            )
+        # Finish Request
+        response_id = self.finish_request(
+            message['in_reply_to'],
+            body.encode(self.ENCODING),
+        )
 
-            if response_id is None:
-                error = self.RESPONSE_FAILURE_ERROR
-        else:
-            error = self.INSUFFICIENT_MSG_FIELDS_ERROR
-
-        if error is not None:
-            yield self.publish_nack(message_id, error)
+        # Response failure
+        if response_id is None:
+            yield self.publish_nack(message_id, self.RESPONSE_FAILURE_ERROR)
             return
 
         yield self.publish_ack(user_message_id=message_id,
