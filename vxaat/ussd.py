@@ -26,6 +26,10 @@ class AatUssdTransport(HttpRpcTransport):
     EXPECTED_FIELDS = set(['msisdn', 'provider'])
     IGNORE_FIELDS = set(['request'])
 
+    # errors
+    RESPONSE_FAILURE_ERROR = "Response to http request failed."
+    INSUFFICIENT_MSG_FIELDS_ERROR = "Insufficiant message fields provided."
+
     CONFIG_CLASS = AatUssdTransportConfig
 
     def get_callback_url(self):
@@ -33,7 +37,6 @@ class AatUssdTransport(HttpRpcTransport):
         return "%s%s" % (
             config.base_url,
             config.web_path)
-
 
     @inlineCallbacks
     def handle_raw_inbound_message(self, message_id, request):
@@ -133,4 +136,3 @@ class AatUssdTransport(HttpRpcTransport):
 
         yield self.publish_ack(user_message_id=message_id,
                                sent_message_id=message_id)
-

@@ -53,7 +53,8 @@ class TestAatUssdTransport(VumiTestCase):
         if continue_session:
             options = (
                 '<options>'
-                '<option callback="%s" command="1" display="false" order="1" />'
+                '<option callback="%s" command="1" display="false"'
+                ' order="1" />'
                 '</options>'
             ) % callback
         else:
@@ -82,7 +83,7 @@ class TestAatUssdTransport(VumiTestCase):
     def test_inbound_begin(self):
 
         # Send initial request
-        d = self.tx_helper.mk_request('')
+        d = self.tx_helper.mk_request()
         [msg] = yield self.tx_helper.wait_for_dispatched_inbound(1)
 
         self.assert_inbound_message(
@@ -109,7 +110,7 @@ class TestAatUssdTransport(VumiTestCase):
     def test_inbound_begin_with_close(self):
 
         # Send initial request
-        d = self.tx_helper.mk_request('')
+        d = self.tx_helper.mk_request()
         [msg] = yield self.tx_helper.wait_for_dispatched_inbound(1)
 
         self.assert_inbound_message(
@@ -137,7 +138,7 @@ class TestAatUssdTransport(VumiTestCase):
     def test_inbound_resume_and_reply_with_end(self):
 
         user_content = "I didn't expect a kind of Spanish Inquisition!"
-        d = self.tx_helper.mk_request('', request=user_content)
+        d = self.tx_helper.mk_request(request=user_content)
         [msg] = yield self.tx_helper.wait_for_dispatched_inbound(1)
         self.assert_inbound_message(
             msg,
@@ -164,7 +165,7 @@ class TestAatUssdTransport(VumiTestCase):
     def test_inbound_resume_and_reply_with_resume(self):
 
         user_content = "Well, what is it you want?"
-        d = self.tx_helper.mk_request('some-suffix', request=user_content)
+        d = self.tx_helper.mk_request(request=user_content)
         [msg] = yield self.tx_helper.wait_for_dispatched_inbound(1)
         self.assert_inbound_message(
             msg,
