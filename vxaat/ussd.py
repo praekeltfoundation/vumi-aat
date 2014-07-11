@@ -28,7 +28,7 @@ class AatUssdTransport(HttpRpcTransport):
 
     # errors
     RESPONSE_FAILURE_ERROR = "Response to http request failed."
-    INSUFFICIENT_MSG_FIELDS_ERROR = "Insufficiant message fields provided."
+    INSUFFICIENT_MSG_FIELDS_ERROR = "Insufficient message fields provided."
 
     CONFIG_CLASS = AatUssdTransportConfig
 
@@ -50,6 +50,13 @@ class AatUssdTransport(HttpRpcTransport):
         )
         errors.update(field_value_errors)
 
+        if errors:
+            log.msg('Unhappy incoming message: %s ' % (errors,))
+            yield self.finish_request(
+                message_id, json.dumps(errors), code=http.BAD_REQUEST
+            )
+            return
+
         from_address = values['msisdn']
         provider = values['provider']
 
@@ -59,13 +66,6 @@ class AatUssdTransport(HttpRpcTransport):
         else:
             response = ""
             session_event = TransportUserMessage.SESSION_NEW
-
-        if errors:
-            log.msg('Unhappy incoming message: %s ' % (errors,))
-            yield self.finish_request(
-                message_id, json.dumps(errors), code=http.BAD_REQUEST
-            )
-            return
 
         log.msg('AatUssdTransport receiving inbound message from %s to %s.' %
                 (from_address, to_address))
@@ -89,7 +89,7 @@ class AatUssdTransport(HttpRpcTransport):
         headertext = SubElement(request, 'headertext')
         headertext.text = reply
 
-        # If this is a SESSION_CLOSE, then do not send options
+        # If this is not a session close event, then send options
         if session_event != TransportUserMessage.SESSION_CLOSE:
             options = SubElement(request, 'options')
             SubElement(
