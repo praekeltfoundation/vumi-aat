@@ -196,8 +196,9 @@ class TestAatUssdTransport(VumiTestCase):
             params={"request": '', "provider": ''})
 
         self.assertEqual(
-            response.delivered_body,
-            json.dumps({'missing_parameter': ['msisdn']}))
+            json.loads(response.delivered_body),
+            {'missing_parameter': ['msisdn']})
+
         self.assertEqual(response.code, 400)
 
     @inlineCallbacks
@@ -211,3 +212,22 @@ class TestAatUssdTransport(VumiTestCase):
         self.assertEqual(
             sorted(body['unexpected_parameter']),
             ['unexpected_p1', 'unexpected_p2'])
+
+    @inlineCallbacks
+    def test_no_reply_to_in_response(self):
+        msg = yield self.tx_helper.make_dispatch_outbound(
+            content="Nudge, nudge, wink, wink. Know what I mean?",
+            message_id=1
+        )
+        [nack] = yield self.tx_helper.wait_for_dispatched_events(1)
+        self.assert_nack(nack, msg, "Insufficient message fields provided.")
+
+    @inlineCallbacks
+    def test_failed_request(self):
+        msg = yield self.tx_helper.make_dispatch_outbound(
+            in_reply_to='xxxx',
+            content="She turned me into a newt!",
+            message_id=1
+        )
+        [nack] = yield self.tx_helper.wait_for_dispatched_events(1)
+        self.assert_nack(nack, msg, "Response to http request failed.")

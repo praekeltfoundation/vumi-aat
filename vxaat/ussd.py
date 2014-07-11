@@ -24,7 +24,7 @@ class AatUssdTransport(HttpRpcTransport):
     transport_type = 'ussd'
     ENCODING = 'utf-8'
     EXPECTED_FIELDS = set(['msisdn', 'provider'])
-    IGNORE_FIELDS = set(['request'])
+    OPTIONAL_FIELDS = set(['request'])
 
     # errors
     RESPONSE_FAILURE_ERROR = "Response to http request failed."
@@ -46,7 +46,7 @@ class AatUssdTransport(HttpRpcTransport):
         values, field_value_errors = self.get_field_values(
             request,
             self.EXPECTED_FIELDS,
-            self.IGNORE_FIELDS,
+            self.OPTIONAL_FIELDS,
         )
         errors.update(field_value_errors)
 
@@ -119,7 +119,6 @@ class AatUssdTransport(HttpRpcTransport):
         )
 
         if message.payload.get('in_reply_to') and 'content' in message.payload:
-
             response_id = self.finish_request(
                 message['in_reply_to'],
                 body.encode(self.ENCODING),
