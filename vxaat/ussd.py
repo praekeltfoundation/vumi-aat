@@ -118,10 +118,10 @@ class AatUssdTransport(HttpRpcTransport):
         )
 
         # Errors
-        if 'content' not in message.payload or not message.payload['content']:
+        if not message['content']:
             yield self.publish_nack(message_id, self.NO_CONTENT_ERROR)
             return
-        if message.payload.get('in_reply_to') is None:
+        if not message['in_reply_to']:
             yield self.publish_nack(message_id, self.NOT_REPLY_ERROR)
             return
 
