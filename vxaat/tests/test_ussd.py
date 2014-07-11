@@ -1,3 +1,5 @@
+import json
+
 from twisted.internet.defer import inlineCallbacks
 
 from vumi.message import TransportUserMessage
@@ -187,3 +189,25 @@ class TestAatUssdTransport(VumiTestCase):
 
         [ack] = yield self.tx_helper.wait_for_dispatched_events(1)
         self.assert_ack(ack, reply)
+
+    @inlineCallbacks
+    def test_request_with_missing_parameters(self):
+        response = yield self.tx_helper.mk_request_raw(
+            params={"request": '', "provider": ''})
+
+        self.assertEqual(
+            response.delivered_body,
+            json.dumps({'missing_parameter': ['msisdn']}))
+        self.assertEqual(response.code, 400)
+
+    @inlineCallbacks
+    def test_request_with_unexpected_parameters(self):
+        response = yield self.tx_helper.mk_request(
+            unexpected_p1='', unexpected_p2='')
+
+        self.assertEqual(response.code, 400)
+        body = json.loads(response.delivered_body)
+        self.assertEqual(set(['unexpected_parameter']), set(body.keys()))
+        self.assertEqual(
+            sorted(body['unexpected_parameter']),
+            ['unexpected_p1', 'unexpected_p2'])
