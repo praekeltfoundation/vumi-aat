@@ -28,8 +28,8 @@ class AatUssdTransport(HttpRpcTransport):
 
     # errors
     RESPONSE_FAILURE_ERROR = "Response to http request failed."
-    NOT_REPLY_ERROR = "Message is not a reply."
-    NO_CONTENT_ERROR = "No content in reply."
+    NOT_REPLY_ERROR = "Outbound message is not a reply"
+    NO_CONTENT_ERROR = "Outbound message has no content."
 
     CONFIG_CLASS = AatUssdTransportConfig
 
@@ -126,7 +126,6 @@ class AatUssdTransport(HttpRpcTransport):
         if message.payload.get('in_reply_to') is None:
             yield self.publish_nack(message_id, self.NOT_REPLY_ERROR)
             return
-
 
         # Finish Request
         response_id = self.finish_request(

@@ -220,7 +220,7 @@ class TestAatUssdTransport(VumiTestCase):
             message_id=1
         )
         [nack] = yield self.tx_helper.wait_for_dispatched_events(1)
-        self.assert_nack(nack, msg, "Message is not a reply.")
+        self.assert_nack(nack, msg, "Outbound message is not a reply")
 
     @inlineCallbacks
     def test_no_content_in_reply(self):
@@ -229,7 +229,7 @@ class TestAatUssdTransport(VumiTestCase):
             message_id=1
         )
         [nack] = yield self.tx_helper.wait_for_dispatched_events(1)
-        self.assert_nack(nack, msg, "No content in reply.")
+        self.assert_nack(nack, msg, "Outbound message has no content.")
 
     @inlineCallbacks
     def test_failed_request(self):
