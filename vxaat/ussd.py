@@ -41,15 +41,13 @@ class AatUssdTransport(HttpRpcTransport):
 
     @inlineCallbacks
     def handle_raw_inbound_message(self, message_id, request):
-        errors = {}
         to_address = self.get_static_config().to_addr
 
-        values, field_value_errors = self.get_field_values(
+        values, errors = self.get_field_values(
             request,
             self.EXPECTED_FIELDS,
             self.OPTIONAL_FIELDS,
         )
-        errors.update(field_value_errors)
 
         if errors:
             log.msg('Unhappy incoming message: %s ' % (errors,))
