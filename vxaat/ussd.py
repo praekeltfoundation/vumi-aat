@@ -28,7 +28,8 @@ class AatUssdTransport(HttpRpcTransport):
 
     # errors
     RESPONSE_FAILURE_ERROR = "Response to http request failed."
-    INSUFFICIENT_MSG_FIELDS_ERROR = "Insufficient message fields provided."
+    NOT_REPLY_ERROR = "Message is not a reply."
+    NO_CONTENT_ERROR = "No content in reply."
 
     CONFIG_CLASS = AatUssdTransportConfig
 
@@ -110,7 +111,7 @@ class AatUssdTransport(HttpRpcTransport):
 
     @inlineCallbacks
     def handle_outbound_message(self, message):
-        error = None
+        # Generate outbound message
         message_id = message['message_id']
         body = self.generate_body(
             message['content'],
@@ -118,19 +119,24 @@ class AatUssdTransport(HttpRpcTransport):
             message['session_event']
         )
 
-        if message.payload.get('in_reply_to') and 'content' in message.payload:
-            response_id = self.finish_request(
-                message['in_reply_to'],
-                body.encode(self.ENCODING),
-            )
+        # Errors
+        if 'content' not in message.payload or not message.payload['content']:
+            yield self.publish_nack(message_id, self.NO_CONTENT_ERROR)
+            return
+        if message.payload.get('in_reply_to') is None:
+            yield self.publish_nack(message_id, self.NOT_REPLY_ERROR)
+            return
 
-            if response_id is None:
-                error = self.RESPONSE_FAILURE_ERROR
-        else:
-            error = self.INSUFFICIENT_MSG_FIELDS_ERROR
 
-        if error is not None:
-            yield self.publish_nack(message_id, error)
+        # Finish Request
+        response_id = self.finish_request(
+            message['in_reply_to'],
+            body.encode(self.ENCODING),
+        )
+
+        # Response failure
+        if response_id is None:
+            yield self.publish_nack(message_id, self.RESPONSE_FAILURE_ERROR)
             return
 
         yield self.publish_ack(user_message_id=message_id,
