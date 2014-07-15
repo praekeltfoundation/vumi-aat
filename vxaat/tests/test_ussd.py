@@ -92,7 +92,7 @@ class TestAatUssdTransport(VumiTestCase):
         self.assert_inbound_message(
             msg,
             session_event=TransportUserMessage.SESSION_NEW,
-            content="",
+            content=None,
         )
 
         reply_content = 'We are the Knights Who Say ... Ni!'
@@ -119,7 +119,7 @@ class TestAatUssdTransport(VumiTestCase):
         self.assert_inbound_message(
             msg,
             session_event=TransportUserMessage.SESSION_NEW,
-            content="",
+            content=None,
         )
 
         reply_content = 'We are no longer the Knight who say Ni!'
@@ -248,8 +248,8 @@ class TestAatUssdTransport(VumiTestCase):
     def test_ussd_session_id_handled(self):
         ussd_session_id = 'xxxx'
         user_content = "Well, what is it you want?"
-        self.tx_helper.mk_request(request=user_content,
-                                  ussdSessionId=ussd_session_id)
+        d = self.tx_helper.mk_request(request=user_content,
+                                            ussdSessionId=ussd_session_id)
         [msg] = yield self.tx_helper.wait_for_dispatched_inbound(1)
         self.assert_inbound_message(
             msg,
