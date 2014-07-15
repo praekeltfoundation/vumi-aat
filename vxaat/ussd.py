@@ -24,7 +24,7 @@ class AatUssdTransport(HttpRpcTransport):
     transport_type = 'ussd'
     ENCODING = 'utf-8'
     EXPECTED_FIELDS = set(['msisdn', 'provider'])
-    OPTIONAL_FIELDS = set(['request'])
+    OPTIONAL_FIELDS = set(['request', 'ussdSessionId'])
 
     # errors
     RESPONSE_FAILURE_ERROR = "Response to http request failed."
@@ -66,6 +66,12 @@ class AatUssdTransport(HttpRpcTransport):
             response = ""
             session_event = TransportUserMessage.SESSION_NEW
 
+        if 'ussdSessionId' in request.args:
+            ussd_session_id = request.args.get('ussdSessionId')[0]\
+                .decode(self.ENCODING)
+        else:
+            ussd_session_id = ""
+
         log.msg('AatUssdTransport receiving inbound message from %s to %s.' %
                 (from_address, to_address))
 
@@ -78,7 +84,8 @@ class AatUssdTransport(HttpRpcTransport):
             transport_type=self.transport_type,
             transport_metadata={
                 'aat_ussd': {
-                    'provider': provider
+                    'provider': provider,
+                    'ussd_session_id': ussd_session_id,
                 }
             }
         )
