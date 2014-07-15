@@ -36,7 +36,7 @@ class AatUssdTransport(HttpRpcTransport):
     def get_callback_url(self):
         config = self.get_static_config()
         return "%s%s?session_event=resume" % (
-            config.base_url,
+            config.base_url.rstrip("/"),
             config.web_path)
 
     def get_optional_field_values(self, request, optional_fields=frozenset()):

@@ -12,13 +12,13 @@ from vxaat.ussd import AatUssdTransport
 class TestAatUssdTransport(VumiTestCase):
 
     @inlineCallbacks
-    def setUp(self):
+    def setup_base(self, base_url):
         request_defaults = {
             'msisdn': '27729042520',
             'provider': 'MTN',
         }
         self.config = {
-            'base_url': "http://www.example.com/foo",
+            'base_url': base_url,
             'web_path': '/api/v1/aat/ussd/',
             'web_port': '0',
             'to_addr': '1234'
@@ -33,6 +33,10 @@ class TestAatUssdTransport(VumiTestCase):
         self.transport_url = self.transport.get_transport_url(
             self.config['web_path'],
         )
+
+    def setUp(self):
+        self.setup_base("http://www.example.com/foo")
+
 
     def callback_url(self):
         # Not sure if I should reconstruct it here.
@@ -268,6 +272,35 @@ class TestAatUssdTransport(VumiTestCase):
         reply = msg.reply(reply_content, continue_session=True)
         self.tx_helper.dispatch_outbound(reply)
         yield d
+
+        [ack] = yield self.tx_helper.wait_for_dispatched_events(1)
+        self.assert_ack(ack, reply)
+
+    @inlineCallbacks
+    def test_callback_url_with_trailing_slash(self):
+        self.setup_base("http://www.example.com/foo/")
+
+        user_content = "Well, what is it you want?"
+        d = self.tx_helper.mk_request(request=user_content,
+                                      session_event="resume")
+        [msg] = yield self.tx_helper.wait_for_dispatched_inbound(1)
+        self.assert_inbound_message(
+            msg,
+            session_event=TransportUserMessage.SESSION_RESUME,
+            content=user_content,
+        )
+
+        reply_content = "We want ... a shrubbery!"
+        reply = msg.reply(reply_content, continue_session=True)
+        self.tx_helper.dispatch_outbound(reply)
+        response = yield d
+
+        self.assert_outbound_message(
+            response.delivered_body,
+            reply_content,
+            self.callback_url(),
+            continue_session=True,
+        )
 
         [ack] = yield self.tx_helper.wait_for_dispatched_events(1)
         self.assert_ack(ack, reply)
