@@ -36,7 +36,8 @@ class TestAatUssdTransport(VumiTestCase):
 
     def callback_url(self):
         # Not sure if I should reconstruct it here.
-        return "http://www.example.com/foo/api/v1/aat/ussd/"
+        return ("http://www.example.com/foo/api/v1/aat/ussd/"
+                "?session_event=resume")
 
     def assert_inbound_message(self, msg, **field_values):
         expected_field_values = {
@@ -85,13 +86,13 @@ class TestAatUssdTransport(VumiTestCase):
     def test_inbound_begin(self):
 
         # Send initial request
-        d = self.tx_helper.mk_request()
+        d = self.tx_helper.mk_request(request="*code#")
         [msg] = yield self.tx_helper.wait_for_dispatched_inbound(1)
 
         self.assert_inbound_message(
             msg,
             session_event=TransportUserMessage.SESSION_NEW,
-            content="",
+            content=None,
         )
 
         reply_content = 'We are the Knights Who Say ... Ni!'
@@ -112,13 +113,13 @@ class TestAatUssdTransport(VumiTestCase):
     def test_inbound_begin_with_close(self):
 
         # Send initial request
-        d = self.tx_helper.mk_request()
+        d = self.tx_helper.mk_request(request="*code#")
         [msg] = yield self.tx_helper.wait_for_dispatched_inbound(1)
 
         self.assert_inbound_message(
             msg,
             session_event=TransportUserMessage.SESSION_NEW,
-            content="",
+            content=None,
         )
 
         reply_content = 'We are no longer the Knight who say Ni!'
@@ -140,7 +141,8 @@ class TestAatUssdTransport(VumiTestCase):
     def test_inbound_resume_and_reply_with_end(self):
 
         user_content = "I didn't expect a kind of Spanish Inquisition!"
-        d = self.tx_helper.mk_request(request=user_content)
+        d = self.tx_helper.mk_request(request=user_content,
+                                      session_event="resume")
         [msg] = yield self.tx_helper.wait_for_dispatched_inbound(1)
         self.assert_inbound_message(
             msg,
@@ -167,7 +169,8 @@ class TestAatUssdTransport(VumiTestCase):
     def test_inbound_resume_and_reply_with_resume(self):
 
         user_content = "Well, what is it you want?"
-        d = self.tx_helper.mk_request(request=user_content)
+        d = self.tx_helper.mk_request(request=user_content,
+                                      session_event="resume")
         [msg] = yield self.tx_helper.wait_for_dispatched_inbound(1)
         self.assert_inbound_message(
             msg,
@@ -240,3 +243,31 @@ class TestAatUssdTransport(VumiTestCase):
         )
         [nack] = yield self.tx_helper.wait_for_dispatched_events(1)
         self.assert_nack(nack, msg, "Response to http request failed.")
+
+    @inlineCallbacks
+    def test_ussd_session_id_handled(self):
+        ussd_session_id = 'xxxx'
+        content = "*code#"
+        d = self.tx_helper.mk_request(request=content,
+                                      ussdSessionId=ussd_session_id)
+        [msg] = yield self.tx_helper.wait_for_dispatched_inbound(1)
+        self.assert_inbound_message(
+            msg,
+            session_event=TransportUserMessage.SESSION_NEW,
+            content=None,
+            transport_metadata={
+                'aat_ussd': {
+                    'provider': 'MTN',
+                    'ussd_session_id': ussd_session_id,
+                    'code': content
+                }
+            }
+        )
+
+        reply_content = "We want ... a shrubbery!"
+        reply = msg.reply(reply_content, continue_session=True)
+        self.tx_helper.dispatch_outbound(reply)
+        yield d
+
+        [ack] = yield self.tx_helper.wait_for_dispatched_events(1)
+        self.assert_ack(ack, reply)

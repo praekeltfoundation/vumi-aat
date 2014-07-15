@@ -24,7 +24,7 @@ class AatUssdTransport(HttpRpcTransport):
     transport_type = 'ussd'
     ENCODING = 'utf-8'
     EXPECTED_FIELDS = set(['msisdn', 'provider'])
-    OPTIONAL_FIELDS = set(['request'])
+    OPTIONAL_FIELDS = set(['request', 'ussdSessionId', 'session_event'])
 
     # errors
     RESPONSE_FAILURE_ERROR = "Response to http request failed."
@@ -35,9 +35,19 @@ class AatUssdTransport(HttpRpcTransport):
 
     def get_callback_url(self):
         config = self.get_static_config()
-        return "%s%s" % (
+        return "%s%s?session_event=resume" % (
             config.base_url,
             config.web_path)
+
+    def get_optional_field_values(self, request, optional_fields=frozenset()):
+        values = {}
+        for field in optional_fields:
+            if field in request.args:
+                raw_value = request.args.get(field)[0]
+                values[field] = raw_value.decode(self.ENCODING)
+            else:
+                values[field] = None
+        return values
 
     @inlineCallbacks
     def handle_raw_inbound_message(self, message_id, request):
@@ -49,6 +59,11 @@ class AatUssdTransport(HttpRpcTransport):
             self.OPTIONAL_FIELDS,
         )
 
+        optional_values = self.get_optional_field_values(
+            request,
+            self.OPTIONAL_FIELDS
+        )
+
         if errors:
             log.msg('Unhappy incoming message: %s ' % (errors,))
             yield self.finish_request(
@@ -58,27 +73,32 @@ class AatUssdTransport(HttpRpcTransport):
 
         from_address = values['msisdn']
         provider = values['provider']
+        ussd_session_id = optional_values['ussdSessionId']
 
-        if 'request' in request.args:
-            response = request.args.get('request')[0].decode(self.ENCODING)
+        if optional_values['session_event'] == "resume":
             session_event = TransportUserMessage.SESSION_RESUME
+            content = optional_values['request']
+            code = None
         else:
-            response = ""
             session_event = TransportUserMessage.SESSION_NEW
+            content = None
+            code = optional_values['request']
 
         log.msg('AatUssdTransport receiving inbound message from %s to %s.' %
                 (from_address, to_address))
 
         yield self.publish_message(
             message_id=message_id,
-            content=response,
+            content=content,
             to_addr=to_address,
             from_addr=from_address,
             session_event=session_event,
             transport_type=self.transport_type,
             transport_metadata={
                 'aat_ussd': {
-                    'provider': provider
+                    'provider': provider,
+                    'ussd_session_id': ussd_session_id,
+                    'code': code
                 }
             }
         )
