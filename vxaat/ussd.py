@@ -2,12 +2,12 @@ import json
 from xml.etree.ElementTree import Element, SubElement, tostring
 
 from twisted.internet.defer import inlineCallbacks
-from twisted.python import log
 from twisted.web import http
 
 from vumi.message import TransportUserMessage
 from vumi.config import ConfigText
 from vumi.transports.httprpc import HttpRpcTransport
+from vumi import log
 
 
 class AatUssdTransportConfig(HttpRpcTransport.CONFIG_CLASS):
@@ -65,7 +65,7 @@ class AatUssdTransport(HttpRpcTransport):
         )
 
         if errors:
-            log.msg('Unhappy incoming message: %s ' % (errors,))
+            log.info('Unhappy incoming message: %s ' % (errors,))
             yield self.finish_request(
                 message_id, json.dumps(errors), code=http.BAD_REQUEST
             )
@@ -84,7 +84,7 @@ class AatUssdTransport(HttpRpcTransport):
             content = None
             code = optional_values['request']
 
-        log.msg('AatUssdTransport receiving inbound message from %s to %s.' %
+        log.info('AatUssdTransport receiving inbound message from %s to %s.' %
                 (from_address, to_address))
 
         yield self.publish_message(
@@ -136,6 +136,8 @@ class AatUssdTransport(HttpRpcTransport):
             self.get_callback_url(),
             message['session_event']
         )
+        log.info('AatUssdTransport outbound message with content: %r'
+                 % (body,))
 
         # Errors
         if not message['content']:
