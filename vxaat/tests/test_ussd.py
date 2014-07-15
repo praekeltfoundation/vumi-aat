@@ -249,7 +249,7 @@ class TestAatUssdTransport(VumiTestCase):
         ussd_session_id = 'xxxx'
         user_content = "Well, what is it you want?"
         d = self.tx_helper.mk_request(request=user_content,
-                                            ussdSessionId=ussd_session_id)
+                                      ussdSessionId=ussd_session_id)
         [msg] = yield self.tx_helper.wait_for_dispatched_inbound(1)
         self.assert_inbound_message(
             msg,
@@ -270,4 +270,3 @@ class TestAatUssdTransport(VumiTestCase):
 
         [ack] = yield self.tx_helper.wait_for_dispatched_events(1)
         self.assert_ack(ack, reply)
-
