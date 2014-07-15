@@ -86,7 +86,7 @@ class TestAatUssdTransport(VumiTestCase):
     def test_inbound_begin(self):
 
         # Send initial request
-        d = self.tx_helper.mk_request()
+        d = self.tx_helper.mk_request(request="*code#")
         [msg] = yield self.tx_helper.wait_for_dispatched_inbound(1)
 
         self.assert_inbound_message(
@@ -113,7 +113,7 @@ class TestAatUssdTransport(VumiTestCase):
     def test_inbound_begin_with_close(self):
 
         # Send initial request
-        d = self.tx_helper.mk_request()
+        d = self.tx_helper.mk_request(request="*code#")
         [msg] = yield self.tx_helper.wait_for_dispatched_inbound(1)
 
         self.assert_inbound_message(
@@ -247,18 +247,19 @@ class TestAatUssdTransport(VumiTestCase):
     @inlineCallbacks
     def test_ussd_session_id_handled(self):
         ussd_session_id = 'xxxx'
-        user_content = "Well, what is it you want?"
-        d = self.tx_helper.mk_request(request=user_content,
+        content = "*code#"
+        d = self.tx_helper.mk_request(request=content,
                                       ussdSessionId=ussd_session_id)
         [msg] = yield self.tx_helper.wait_for_dispatched_inbound(1)
         self.assert_inbound_message(
             msg,
             session_event=TransportUserMessage.SESSION_NEW,
-            content=user_content,
+            content=None,
             transport_metadata={
                 'aat_ussd': {
                     'provider': 'MTN',
                     'ussd_session_id': ussd_session_id,
+                    'code': content
                 }
             }
         )

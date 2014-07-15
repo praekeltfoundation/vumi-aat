@@ -74,20 +74,22 @@ class AatUssdTransport(HttpRpcTransport):
         from_address = values['msisdn']
         provider = values['provider']
         ussd_session_id = optional_values['ussdSessionId']
-        response = optional_values['request']
 
-        # Get session event
         if optional_values['session_event'] == "resume":
             session_event = TransportUserMessage.SESSION_RESUME
+            content = optional_values['request']
+            code = None
         else:
             session_event = TransportUserMessage.SESSION_NEW
+            content = None
+            code = optional_values['request']
 
         log.msg('AatUssdTransport receiving inbound message from %s to %s.' %
                 (from_address, to_address))
 
         yield self.publish_message(
             message_id=message_id,
-            content=response,
+            content=content,
             to_addr=to_address,
             from_addr=from_address,
             session_event=session_event,
@@ -96,6 +98,7 @@ class AatUssdTransport(HttpRpcTransport):
                 'aat_ussd': {
                     'provider': provider,
                     'ussd_session_id': ussd_session_id,
+                    'code': code
                 }
             }
         )
