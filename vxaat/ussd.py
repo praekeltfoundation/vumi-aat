@@ -43,7 +43,8 @@ class AatUssdTransport(HttpRpcTransport):
         values = {}
         for field in optional_fields:
             if field in request.args:
-                values[field] = request.args.get(field)[0].decode(self.ENCODING)
+                values[field] = request.args.get(field)[0]\
+                    .decode(self.ENCODING)
             else:
                 values[field] = ""
         return values
