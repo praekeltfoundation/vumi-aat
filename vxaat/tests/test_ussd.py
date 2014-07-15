@@ -266,6 +266,8 @@ class TestAatUssdTransport(VumiTestCase):
         reply_content = "We want ... a shrubbery!"
         reply = msg.reply(reply_content, continue_session=True)
         self.tx_helper.dispatch_outbound(reply)
+        yield d
 
         [ack] = yield self.tx_helper.wait_for_dispatched_events(1)
         self.assert_ack(ack, reply)
+

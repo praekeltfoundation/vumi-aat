@@ -76,8 +76,8 @@ class AatUssdTransport(HttpRpcTransport):
         ussd_session_id = optional_values['ussdSessionId']
         response = optional_values['request']
 
-        #Get session event
-        if 'session_event' in request.args:
+        # Get session event
+        if optional_values['session_event'] == "resume":
             session_event = TransportUserMessage.SESSION_RESUME
         else:
             session_event = TransportUserMessage.SESSION_NEW
