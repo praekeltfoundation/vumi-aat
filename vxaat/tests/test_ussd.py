@@ -1,6 +1,6 @@
 import json
 
-from twisted.internet.defer import inlineCallbacks
+from twisted.internet.defer import inlineCallbacks, returnValue
 
 from vumi.message import TransportUserMessage
 from vumi.tests.helpers import VumiTestCase
@@ -11,17 +11,21 @@ from vxaat.ussd import AatUssdTransport
 
 class TestAatUssdTransport(VumiTestCase):
 
-    @inlineCallbacks
-    def setup_base(self, base_url):
-        request_defaults = {
-            'msisdn': '27729042520',
-            'provider': 'MTN',
-        }
-        self.config = {
-            'base_url': base_url,
+    def get_transport(self, config={}):
+        defaults = {
+            'base_url': 'http://www.example.com/foo',
             'web_path': '/api/v1/aat/ussd/',
             'web_port': '0',
             'to_addr': '1234'
+        }
+        defaults.update(config)
+        self.config = config
+        return self.tx_helper.get_transport(defaults)
+
+    def setUp(self):
+        request_defaults = {
+            'msisdn': '27729042520',
+            'provider': 'MTN',
         }
         self.tx_helper = self.add_helper(
             HttpRpcTransportHelper(
@@ -29,14 +33,6 @@ class TestAatUssdTransport(VumiTestCase):
                 request_defaults=request_defaults,
             )
         )
-        self.transport = yield self.tx_helper.get_transport(self.config)
-        self.transport_url = self.transport.get_transport_url(
-            self.config['web_path'],
-        )
-
-    def setUp(self):
-        self.setup_base("http://www.example.com/foo")
-
 
     def callback_url(self):
         # Not sure if I should reconstruct it here.
@@ -88,6 +84,7 @@ class TestAatUssdTransport(VumiTestCase):
 
     @inlineCallbacks
     def test_inbound_begin(self):
+        self.transport = yield self.get_transport()
 
         # Send initial request
         d = self.tx_helper.mk_request(request="*code#")
@@ -115,6 +112,7 @@ class TestAatUssdTransport(VumiTestCase):
 
     @inlineCallbacks
     def test_inbound_begin_with_close(self):
+        self.transport = yield self.get_transport()
 
         # Send initial request
         d = self.tx_helper.mk_request(request="*code#")
@@ -143,6 +141,7 @@ class TestAatUssdTransport(VumiTestCase):
 
     @inlineCallbacks
     def test_inbound_resume_and_reply_with_end(self):
+        self.transport = yield self.get_transport()
 
         user_content = "I didn't expect a kind of Spanish Inquisition!"
         d = self.tx_helper.mk_request(request=user_content,
@@ -171,6 +170,7 @@ class TestAatUssdTransport(VumiTestCase):
 
     @inlineCallbacks
     def test_inbound_resume_and_reply_with_resume(self):
+        self.transport = yield self.get_transport()
 
         user_content = "Well, what is it you want?"
         d = self.tx_helper.mk_request(request=user_content,
@@ -199,6 +199,7 @@ class TestAatUssdTransport(VumiTestCase):
 
     @inlineCallbacks
     def test_request_with_missing_parameters(self):
+        self.transport = yield self.get_transport()
         response = yield self.tx_helper.mk_request_raw(
             params={"request": '', "provider": ''})
 
@@ -210,6 +211,7 @@ class TestAatUssdTransport(VumiTestCase):
 
     @inlineCallbacks
     def test_request_with_unexpected_parameters(self):
+        self.transport = yield self.get_transport()
         response = yield self.tx_helper.mk_request(
             unexpected_p1='', unexpected_p2='')
 
@@ -222,6 +224,7 @@ class TestAatUssdTransport(VumiTestCase):
 
     @inlineCallbacks
     def test_no_reply_to_in_response(self):
+        self.transport = yield self.get_transport()
         msg = yield self.tx_helper.make_dispatch_outbound(
             content="Nudge, nudge, wink, wink. Know what I mean?",
             message_id=1
@@ -231,6 +234,7 @@ class TestAatUssdTransport(VumiTestCase):
 
     @inlineCallbacks
     def test_no_content_in_reply(self):
+        self.transport = yield self.get_transport()
         msg = yield self.tx_helper.make_dispatch_outbound(
             content="",
             message_id=1
@@ -240,6 +244,7 @@ class TestAatUssdTransport(VumiTestCase):
 
     @inlineCallbacks
     def test_failed_request(self):
+        self.transport = yield self.get_transport()
         msg = yield self.tx_helper.make_dispatch_outbound(
             in_reply_to='xxxx',
             content="She turned me into a newt!",
@@ -250,6 +255,8 @@ class TestAatUssdTransport(VumiTestCase):
 
     @inlineCallbacks
     def test_ussd_session_id_handled(self):
+        self.transport = yield self.get_transport()
+
         ussd_session_id = 'xxxx'
         content = "*code#"
         d = self.tx_helper.mk_request(request=content,
@@ -278,7 +285,9 @@ class TestAatUssdTransport(VumiTestCase):
 
     @inlineCallbacks
     def test_callback_url_with_trailing_slash(self):
-        self.setup_base("http://www.example.com/foo/")
+        self.transport = yield self.get_transport({
+            "base_url": "http://www.example.com/foo/",
+        })
 
         user_content = "Well, what is it you want?"
         d = self.tx_helper.mk_request(request=user_content,
