@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import json
 
 from twisted.internet.defer import inlineCallbacks
@@ -282,7 +283,6 @@ class TestAatUssdTransport(VumiTestCase):
         [ack] = yield self.tx_helper.wait_for_dispatched_events(1)
         self.assert_ack(ack, reply)
 
-
     @inlineCallbacks
     def test_callback_url_with_trailing_slash(self):
         yield self.get_transport({
@@ -314,9 +314,10 @@ class TestAatUssdTransport(VumiTestCase):
         [ack] = yield self.tx_helper.wait_for_dispatched_events(1)
         self.assert_ack(ack, reply)
 
-    def test_ascii_on_inbound(self):
+    @inlineCallbacks
+    def test_ascii_on_outbound(self):
         yield self.get_transport()
-        content = "One, two, ... fivë!"
+        content = "One, two, ... five!"
         d = self.tx_helper.mk_request(request=content)
 
         [msg] = yield self.tx_helper.wait_for_dispatched_inbound(1)
@@ -327,15 +328,23 @@ class TestAatUssdTransport(VumiTestCase):
             transport_metadata={
                 'aat_ussd': {
                     'provider': 'MTN',
-                    'code': content
+                    'code': content,
+                    'ussd_session_id': None
                 }
             }
         )
 
-        reply_content = "Three, my lord."
+        reply_content = "Thrëë, my lord."
         reply = msg.reply(reply_content, continue_session=True)
         self.tx_helper.dispatch_outbound(reply)
-        yield d
+        response = yield d
+
+        self.assert_outbound_message(
+            response.delivered_body,
+            reply_content,
+            self.callback_url(),
+            continue_session=True,
+        )
 
         [ack] = yield self.tx_helper.wait_for_dispatched_events(1)
         self.assert_ack(ack, reply)

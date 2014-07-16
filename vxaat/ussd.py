@@ -1,5 +1,5 @@
 import json
-from xml.etree.ElementTree import Element, SubElement, tostring
+from xml.etree.ElementTree import Element, SubElement, tostring, ElementTree
 
 from twisted.internet.defer import inlineCallbacks
 from twisted.web import http
@@ -124,7 +124,7 @@ class AatUssdTransport(HttpRpcTransport):
 
         return tostring(
             request,
-            encoding='utf-8'
+            encoding='utf-8',
         )
 
     @inlineCallbacks
@@ -150,7 +150,7 @@ class AatUssdTransport(HttpRpcTransport):
         # Finish Request
         response_id = self.finish_request(
             message['in_reply_to'],
-            body.encode(self.ENCODING),
+            body,
         )
 
         # Response failure
