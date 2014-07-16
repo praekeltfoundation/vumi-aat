@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import json
 
 from twisted.internet.defer import inlineCallbacks
@@ -299,6 +300,29 @@ class TestAatUssdTransport(VumiTestCase):
         )
 
         reply_content = "We want ... a shrubbery!"
+        reply = msg.reply(reply_content, continue_session=True)
+        self.tx_helper.dispatch_outbound(reply)
+        response = yield d
+
+        self.assert_outbound_message(
+            response.delivered_body,
+            reply_content,
+            self.callback_url(),
+            continue_session=True,
+        )
+
+        [ack] = yield self.tx_helper.wait_for_dispatched_events(1)
+        self.assert_ack(ack, reply)
+
+    @inlineCallbacks
+    def test_outbound_unicode(self):
+        yield self.get_transport()
+        content = "One, two, ... five!"
+        d = self.tx_helper.mk_request(request=content)
+
+        [msg] = yield self.tx_helper.wait_for_dispatched_inbound(1)
+
+        reply_content = "Thrëë, my lord."
         reply = msg.reply(reply_content, continue_session=True)
         self.tx_helper.dispatch_outbound(reply)
         response = yield d
