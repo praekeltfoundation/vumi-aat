@@ -83,7 +83,7 @@ class TestAatUssdTransport(VumiTestCase):
 
     @inlineCallbacks
     def test_inbound_begin(self):
-        transport = yield self.get_transport()
+        yield self.get_transport()
 
         # Send initial request
         d = self.tx_helper.mk_request(request="*code#")
@@ -111,7 +111,7 @@ class TestAatUssdTransport(VumiTestCase):
 
     @inlineCallbacks
     def test_inbound_begin_with_close(self):
-        transport = yield self.get_transport()
+        yield self.get_transport()
 
         # Send initial request
         d = self.tx_helper.mk_request(request="*code#")
@@ -140,7 +140,7 @@ class TestAatUssdTransport(VumiTestCase):
 
     @inlineCallbacks
     def test_inbound_resume_and_reply_with_end(self):
-        transport = yield self.get_transport()
+        yield self.get_transport()
 
         user_content = "I didn't expect a kind of Spanish Inquisition!"
         d = self.tx_helper.mk_request(request=user_content,
@@ -169,7 +169,7 @@ class TestAatUssdTransport(VumiTestCase):
 
     @inlineCallbacks
     def test_inbound_resume_and_reply_with_resume(self):
-        transport = yield self.get_transport()
+        yield self.get_transport()
 
         user_content = "Well, what is it you want?"
         d = self.tx_helper.mk_request(request=user_content,
@@ -198,7 +198,7 @@ class TestAatUssdTransport(VumiTestCase):
 
     @inlineCallbacks
     def test_request_with_missing_parameters(self):
-        transport = yield self.get_transport()
+        yield self.get_transport()
         response = yield self.tx_helper.mk_request_raw(
             params={"request": '', "provider": ''})
 
@@ -210,7 +210,7 @@ class TestAatUssdTransport(VumiTestCase):
 
     @inlineCallbacks
     def test_request_with_unexpected_parameters(self):
-        transport = yield self.get_transport()
+        yield self.get_transport()
         response = yield self.tx_helper.mk_request(
             unexpected_p1='', unexpected_p2='')
 
@@ -223,7 +223,7 @@ class TestAatUssdTransport(VumiTestCase):
 
     @inlineCallbacks
     def test_no_reply_to_in_response(self):
-        transport = yield self.get_transport()
+        yield self.get_transport()
         msg = yield self.tx_helper.make_dispatch_outbound(
             content="Nudge, nudge, wink, wink. Know what I mean?",
             message_id=1
@@ -233,7 +233,7 @@ class TestAatUssdTransport(VumiTestCase):
 
     @inlineCallbacks
     def test_no_content_in_reply(self):
-        transport = yield self.get_transport()
+        yield self.get_transport()
         msg = yield self.tx_helper.make_dispatch_outbound(
             content="",
             message_id=1
@@ -243,7 +243,7 @@ class TestAatUssdTransport(VumiTestCase):
 
     @inlineCallbacks
     def test_failed_request(self):
-        transport = yield self.get_transport()
+        yield self.get_transport()
         msg = yield self.tx_helper.make_dispatch_outbound(
             in_reply_to='xxxx',
             content="She turned me into a newt!",
@@ -254,7 +254,7 @@ class TestAatUssdTransport(VumiTestCase):
 
     @inlineCallbacks
     def test_ussd_session_id_handled(self):
-        transport = yield self.get_transport()
+        yield self.get_transport()
 
         ussd_session_id = 'xxxx'
         content = "*code#"
@@ -284,7 +284,7 @@ class TestAatUssdTransport(VumiTestCase):
 
     @inlineCallbacks
     def test_callback_url_with_trailing_slash(self):
-        transport = yield self.get_transport({
+        yield self.get_transport({
             "base_url": "http://www.example.com/foo/",
         })
 
