@@ -315,24 +315,12 @@ class TestAatUssdTransport(VumiTestCase):
         self.assert_ack(ack, reply)
 
     @inlineCallbacks
-    def test_ascii_on_outbound(self):
+    def test_outbound_unicode(self):
         yield self.get_transport()
         content = "One, two, ... five!"
         d = self.tx_helper.mk_request(request=content)
 
         [msg] = yield self.tx_helper.wait_for_dispatched_inbound(1)
-        self.assert_inbound_message(
-            msg,
-            session_event=TransportUserMessage.SESSION_NEW,
-            content=None,
-            transport_metadata={
-                'aat_ussd': {
-                    'provider': 'MTN',
-                    'code': content,
-                    'ussd_session_id': None
-                }
-            }
-        )
 
         reply_content = "Thrëë, my lord."
         reply = msg.reply(reply_content, continue_session=True)
