@@ -1,6 +1,6 @@
 import json
 
-from twisted.internet.defer import inlineCallbacks, returnValue
+from twisted.internet.defer import inlineCallbacks
 
 from vumi.message import TransportUserMessage
 from vumi.tests.helpers import VumiTestCase
