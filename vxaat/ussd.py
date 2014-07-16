@@ -160,3 +160,4 @@ class AatUssdTransport(HttpRpcTransport):
 
         yield self.publish_ack(user_message_id=message_id,
                                sent_message_id=message_id)
+

@@ -282,6 +282,7 @@ class TestAatUssdTransport(VumiTestCase):
         [ack] = yield self.tx_helper.wait_for_dispatched_events(1)
         self.assert_ack(ack, reply)
 
+
     @inlineCallbacks
     def test_callback_url_with_trailing_slash(self):
         yield self.get_transport({
@@ -309,6 +310,32 @@ class TestAatUssdTransport(VumiTestCase):
             self.callback_url(),
             continue_session=True,
         )
+
+        [ack] = yield self.tx_helper.wait_for_dispatched_events(1)
+        self.assert_ack(ack, reply)
+
+    def test_ascii_on_inbound(self):
+        yield self.get_transport()
+        content = "One, two, ... fivë!"
+        d = self.tx_helper.mk_request(request=content)
+
+        [msg] = yield self.tx_helper.wait_for_dispatched_inbound(1)
+        self.assert_inbound_message(
+            msg,
+            session_event=TransportUserMessage.SESSION_NEW,
+            content=None,
+            transport_metadata={
+                'aat_ussd': {
+                    'provider': 'MTN',
+                    'code': content
+                }
+            }
+        )
+
+        reply_content = "Three, my lord."
+        reply = msg.reply(reply_content, continue_session=True)
+        self.tx_helper.dispatch_outbound(reply)
+        yield d
 
         [ack] = yield self.tx_helper.wait_for_dispatched_events(1)
         self.assert_ack(ack, reply)
