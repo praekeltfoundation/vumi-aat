@@ -15,7 +15,7 @@ class TestAatUssdTransport(VumiTestCase):
     def setUp(self):
         request_defaults = {
             'msisdn': '27729042520',
-            'provider': 'MTN',
+            'provider': 'MTN'
         }
         self.tx_helper = self.add_helper(
             HttpRpcTransportHelper(
@@ -29,20 +29,17 @@ class TestAatUssdTransport(VumiTestCase):
             'base_url': 'http://www.example.com/foo',
             'web_path': '/api/v1/aat/ussd/',
             'web_port': '0',
-            'to_addr': '1234'
         }
         defaults.update(config)
         return self.tx_helper.get_transport(defaults)
 
-    def callback_url(self):
-        # Not sure if I should reconstruct it here.
-        return ("http://www.example.com/foo/api/v1/aat/ussd/"
-                "?session_event=resume")
+    def callback_url(self, to_addr):
+        return "http://www.example.com/foo/api/v1/aat/ussd/?to_addr=%s" \
+               % to_addr
 
     def assert_inbound_message(self, msg, **field_values):
         expected_field_values = {
             'content':  "",
-            'to_addr': '1234',
             'from_addr': self.tx_helper.request_defaults['msisdn'],
         }
         expected_field_values.update(field_values)
@@ -85,14 +82,16 @@ class TestAatUssdTransport(VumiTestCase):
     @inlineCallbacks
     def test_inbound_begin(self):
         yield self.get_transport()
+        ussd_string = "*1234#"
 
         # Send initial request
-        d = self.tx_helper.mk_request(request="*code#")
+        d = self.tx_helper.mk_request(request=ussd_string)
         [msg] = yield self.tx_helper.wait_for_dispatched_inbound(1)
 
         self.assert_inbound_message(
             msg,
             session_event=TransportUserMessage.SESSION_NEW,
+            to_addr=ussd_string,
             content=None,
         )
 
@@ -104,7 +103,7 @@ class TestAatUssdTransport(VumiTestCase):
         self.assert_outbound_message(
             response.delivered_body,
             reply_content,
-            self.callback_url(),
+            self.callback_url(ussd_string),
         )
 
         [ack] = yield self.tx_helper.wait_for_dispatched_events(1)
@@ -113,15 +112,17 @@ class TestAatUssdTransport(VumiTestCase):
     @inlineCallbacks
     def test_inbound_begin_with_close(self):
         yield self.get_transport()
+        ussd_string = "*code#"
 
         # Send initial request
-        d = self.tx_helper.mk_request(request="*code#")
+        d = self.tx_helper.mk_request(request=ussd_string)
         [msg] = yield self.tx_helper.wait_for_dispatched_inbound(1)
 
         self.assert_inbound_message(
             msg,
             session_event=TransportUserMessage.SESSION_NEW,
             content=None,
+
         )
 
         reply_content = 'We are no longer the Knight who say Ni!'
@@ -132,7 +133,7 @@ class TestAatUssdTransport(VumiTestCase):
         self.assert_outbound_message(
             response.delivered_body,
             reply_content,
-            self.callback_url(),
+            self.callback_url(ussd_string),
             continue_session=False,
         )
 
@@ -143,9 +144,10 @@ class TestAatUssdTransport(VumiTestCase):
     def test_inbound_resume_and_reply_with_end(self):
         yield self.get_transport()
 
+        ussd_string = "*1234#"
         user_content = "I didn't expect a kind of Spanish Inquisition!"
         d = self.tx_helper.mk_request(request=user_content,
-                                      session_event="resume")
+                                      to_addr=ussd_string)
         [msg] = yield self.tx_helper.wait_for_dispatched_inbound(1)
         self.assert_inbound_message(
             msg,
@@ -161,7 +163,7 @@ class TestAatUssdTransport(VumiTestCase):
         self.assert_outbound_message(
             response.delivered_body,
             reply_content,
-            self.callback_url(),
+            self.callback_url(to_addr="*1234#"),
             continue_session=False,
         )
 
@@ -171,15 +173,17 @@ class TestAatUssdTransport(VumiTestCase):
     @inlineCallbacks
     def test_inbound_resume_and_reply_with_resume(self):
         yield self.get_transport()
+        ussd_string = "xxxx"
 
         user_content = "Well, what is it you want?"
         d = self.tx_helper.mk_request(request=user_content,
-                                      session_event="resume")
+                                      to_addr=ussd_string)
         [msg] = yield self.tx_helper.wait_for_dispatched_inbound(1)
         self.assert_inbound_message(
             msg,
             session_event=TransportUserMessage.SESSION_RESUME,
             content=user_content,
+            to_addr=ussd_string
         )
 
         reply_content = "We want ... a shrubbery!"
@@ -190,7 +194,7 @@ class TestAatUssdTransport(VumiTestCase):
         self.assert_outbound_message(
             response.delivered_body,
             reply_content,
-            self.callback_url(),
+            self.callback_url(ussd_string),
             continue_session=True,
         )
 
@@ -254,7 +258,7 @@ class TestAatUssdTransport(VumiTestCase):
         self.assert_nack(nack, msg, "Response to http request failed.")
 
     @inlineCallbacks
-    def test_ussd_session_id_handled(self):
+    def test_metadata_handled(self):
         yield self.get_transport()
 
         ussd_session_id = 'xxxx'
@@ -270,7 +274,6 @@ class TestAatUssdTransport(VumiTestCase):
                 'aat_ussd': {
                     'provider': 'MTN',
                     'ussd_session_id': ussd_session_id,
-                    'code': content
                 }
             }
         )
@@ -288,15 +291,17 @@ class TestAatUssdTransport(VumiTestCase):
         yield self.get_transport({
             "base_url": "http://www.example.com/foo/",
         })
+        ussd_string = '*1234#'
 
         user_content = "Well, what is it you want?"
         d = self.tx_helper.mk_request(request=user_content,
-                                      session_event="resume")
+                                      to_addr=ussd_string)
         [msg] = yield self.tx_helper.wait_for_dispatched_inbound(1)
         self.assert_inbound_message(
             msg,
             session_event=TransportUserMessage.SESSION_RESUME,
             content=user_content,
+            to_addr=ussd_string
         )
 
         reply_content = "We want ... a shrubbery!"
@@ -307,7 +312,7 @@ class TestAatUssdTransport(VumiTestCase):
         self.assert_outbound_message(
             response.delivered_body,
             reply_content,
-            self.callback_url(),
+            self.callback_url(ussd_string),
             continue_session=True,
         )
 
@@ -318,7 +323,8 @@ class TestAatUssdTransport(VumiTestCase):
     def test_outbound_unicode(self):
         yield self.get_transport()
         content = "One, two, ... five!"
-        d = self.tx_helper.mk_request(request=content)
+        ussd_string = '*1234#'
+        d = self.tx_helper.mk_request(request=content, to_addr=ussd_string)
 
         [msg] = yield self.tx_helper.wait_for_dispatched_inbound(1)
 
@@ -330,7 +336,7 @@ class TestAatUssdTransport(VumiTestCase):
         self.assert_outbound_message(
             response.delivered_body,
             reply_content,
-            self.callback_url(),
+            self.callback_url(ussd_string),
             continue_session=True,
         )
 
