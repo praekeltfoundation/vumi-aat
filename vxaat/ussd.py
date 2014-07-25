@@ -22,8 +22,7 @@ class AatUssdTransport(HttpRpcTransport):
     transport_type = 'ussd'
     ENCODING = 'utf-8'
     EXPECTED_FIELDS = set(['msisdn', 'provider'])
-    OPTIONAL_FIELDS = set(['request', 'ussdSessionId', 'session_event',
-                           'to_addr'])
+    OPTIONAL_FIELDS = set(['request', 'ussdSessionId', 'to_addr'])
 
     # errors
     RESPONSE_FAILURE_ERROR = "Response to http request failed."
@@ -71,7 +70,7 @@ class AatUssdTransport(HttpRpcTransport):
             )
             return
 
-        from_address = values['msisdn']
+        from_addr = values['msisdn']
         provider = values['provider']
         ussd_session_id = optional_values['ussdSessionId']
 
@@ -85,13 +84,13 @@ class AatUssdTransport(HttpRpcTransport):
             content = None
 
         log.info('AatUssdTransport receiving inbound message from %s to %s.' %
-                (from_address, to_addr))
+                (from_addr, to_addr))
 
         yield self.publish_message(
             message_id=message_id,
             content=content,
             to_addr=to_addr,
-            from_addr=from_address,
+            from_addr=from_addr,
             session_event=session_event,
             transport_type=self.transport_type,
             transport_metadata={
