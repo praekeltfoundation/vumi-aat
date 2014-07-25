@@ -11,8 +11,6 @@ from vumi import log
 
 
 class AatUssdTransportConfig(HttpRpcTransport.CONFIG_CLASS):
-    to_addr = ConfigText('The USSD code ',
-                         required=True, static=True)
     base_url = ConfigText('The base url of the transport ',
                           required=True, static=True)
 
@@ -24,7 +22,7 @@ class AatUssdTransport(HttpRpcTransport):
     transport_type = 'ussd'
     ENCODING = 'utf-8'
     EXPECTED_FIELDS = set(['msisdn', 'provider'])
-    OPTIONAL_FIELDS = set(['request', 'ussdSessionId', 'session_event'])
+    OPTIONAL_FIELDS = set(['request', 'ussdSessionId', 'to_addr'])
 
     # errors
     RESPONSE_FAILURE_ERROR = "Response to http request failed."
@@ -33,11 +31,13 @@ class AatUssdTransport(HttpRpcTransport):
 
     CONFIG_CLASS = AatUssdTransportConfig
 
-    def get_callback_url(self):
+    def get_callback_url(self, to_addr):
         config = self.get_static_config()
-        return "%s%s?session_event=resume" % (
+        return "%s%s?to_addr=%s" % (
             config.base_url.rstrip("/"),
-            config.web_path)
+            config.web_path,
+            to_addr
+        )
 
     def get_optional_field_values(self, request, optional_fields=frozenset()):
         values = {}
@@ -51,7 +51,6 @@ class AatUssdTransport(HttpRpcTransport):
 
     @inlineCallbacks
     def handle_raw_inbound_message(self, message_id, request):
-        to_address = self.get_static_config().to_addr
 
         values, errors = self.get_field_values(
             request,
@@ -71,34 +70,33 @@ class AatUssdTransport(HttpRpcTransport):
             )
             return
 
-        from_address = values['msisdn']
+        from_addr = values['msisdn']
         provider = values['provider']
         ussd_session_id = optional_values['ussdSessionId']
 
-        if optional_values['session_event'] == "resume":
+        if optional_values['to_addr'] is not None:
             session_event = TransportUserMessage.SESSION_RESUME
+            to_addr = optional_values['to_addr']
             content = optional_values['request']
-            code = None
         else:
             session_event = TransportUserMessage.SESSION_NEW
+            to_addr = optional_values['request']
             content = None
-            code = optional_values['request']
 
         log.info('AatUssdTransport receiving inbound message from %s to %s.' %
-                (from_address, to_address))
+                (from_addr, to_addr))
 
         yield self.publish_message(
             message_id=message_id,
             content=content,
-            to_addr=to_address,
-            from_addr=from_address,
+            to_addr=to_addr,
+            from_addr=from_addr,
             session_event=session_event,
             transport_type=self.transport_type,
             transport_metadata={
                 'aat_ussd': {
                     'provider': provider,
                     'ussd_session_id': ussd_session_id,
-                    'code': code
                 }
             }
         )
@@ -133,7 +131,7 @@ class AatUssdTransport(HttpRpcTransport):
         message_id = message['message_id']
         body = self.generate_body(
             message['content'],
-            self.get_callback_url(),
+            self.get_callback_url(message['from_addr']),
             message['session_event']
         )
         log.info('AatUssdTransport outbound message with content: %r'
@@ -160,4 +158,3 @@ class AatUssdTransport(HttpRpcTransport):
 
         yield self.publish_ack(user_message_id=message_id,
                                sent_message_id=message_id)
-
