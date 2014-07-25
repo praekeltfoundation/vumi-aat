@@ -15,7 +15,7 @@ class TestAatUssdTransport(VumiTestCase):
     def setUp(self):
         request_defaults = {
             'msisdn': '27729042520',
-            'provider': 'MTN'
+            'provider': 'MTN',
         }
         self.tx_helper = self.add_helper(
             HttpRpcTransportHelper(
@@ -26,15 +26,15 @@ class TestAatUssdTransport(VumiTestCase):
 
     def get_transport(self, config={}):
         defaults = {
-            'base_url': 'http://www.e.com/foo',
-            'web_path': '/api/v1/aat/ussd/',
+            'base_url': 'http://www.example.com/foo',
+            'web_path': '/api/aat/ussd/',
             'web_port': '0',
         }
         defaults.update(config)
         return self.tx_helper.get_transport(defaults)
 
     def callback_url(self, to_addr):
-        return "http://www.e.com/foo/api/v1/aat/ussd/?to_addr=%s" % to_addr
+        return "http://www.example.com/foo/api/aat/ussd/?to_addr=%s" % to_addr
 
     def assert_inbound_message(self, msg, **field_values):
         expected_field_values = {
@@ -287,7 +287,7 @@ class TestAatUssdTransport(VumiTestCase):
     @inlineCallbacks
     def test_callback_url_with_trailing_slash(self):
         yield self.get_transport({
-            "base_url": "http://www.e.com/foo/",
+            "base_url": "http://www.example.com/foo/",
         })
         ussd_string = '*1234#'
 
