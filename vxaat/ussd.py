@@ -1,5 +1,6 @@
 import json
-from xml.etree.ElementTree import Element, SubElement, tostring, ElementTree
+from urllib import quote
+from xml.etree.ElementTree import Element, SubElement, tostring
 
 from twisted.internet.defer import inlineCallbacks
 from twisted.web import http
@@ -36,8 +37,7 @@ class AatUssdTransport(HttpRpcTransport):
         return "%s%s?to_addr=%s" % (
             config.base_url.rstrip("/"),
             config.web_path,
-            to_addr
-        )
+            quote(to_addr))
 
     def get_optional_field_values(self, request, optional_fields=frozenset()):
         values = {}
@@ -83,8 +83,9 @@ class AatUssdTransport(HttpRpcTransport):
             to_addr = optional_values['request']
             content = None
 
-        log.info('AatUssdTransport receiving inbound message from %s to %s.' %
-                (from_addr, to_addr))
+        log.info(
+            'AatUssdTransport receiving inbound message from %s to %s.' % (
+                from_addr, to_addr))
 
         yield self.publish_message(
             message_id=message_id,

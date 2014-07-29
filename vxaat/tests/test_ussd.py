@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import json
+from urllib import quote
 
 from twisted.internet.defer import inlineCallbacks
 
@@ -34,7 +35,8 @@ class TestAatUssdTransport(VumiTestCase):
         return self.tx_helper.get_transport(defaults)
 
     def callback_url(self, to_addr):
-        return "http://www.example.com/foo/api/aat/ussd/?to_addr=%s" % to_addr
+        return "http://www.example.com/foo/api/aat/ussd/?to_addr=%s" % (
+            quote(to_addr),)
 
     def assert_inbound_message(self, msg, **field_values):
         expected_field_values = {
