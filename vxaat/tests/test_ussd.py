@@ -42,6 +42,7 @@ class TestAatUssdTransport(VumiTestCase):
         expected_field_values = {
             'content':  "",
             'from_addr': self.tx_helper.request_defaults['msisdn'],
+            'provider': self.tx_helper.request_defaults['provider'],
         }
         expected_field_values.update(field_values)
         for field, expected_value in expected_field_values.iteritems():
@@ -94,6 +95,37 @@ class TestAatUssdTransport(VumiTestCase):
             session_event=TransportUserMessage.SESSION_NEW,
             to_addr=ussd_string,
             content=None,
+        )
+
+        reply_content = 'We are the Knights Who Say ... Ni!'
+        reply = msg.reply(reply_content)
+        self.tx_helper.dispatch_outbound(reply)
+        response = yield d
+
+        self.assert_outbound_message(
+            response.delivered_body,
+            reply_content,
+            self.callback_url(ussd_string),
+        )
+
+        [ack] = yield self.tx_helper.wait_for_dispatched_events(1)
+        self.assert_ack(ack, reply)
+
+    @inlineCallbacks
+    def test_inbound_begin_with_different_provider(self):
+        yield self.get_transport()
+        ussd_string = "*1234#"
+
+        # Send initial request
+        d = self.tx_helper.mk_request(request=ussd_string, provider="Camelot")
+        [msg] = yield self.tx_helper.wait_for_dispatched_inbound(1)
+
+        self.assert_inbound_message(
+            msg,
+            session_event=TransportUserMessage.SESSION_NEW,
+            to_addr=ussd_string,
+            content=None,
+            provider="Camelot",
         )
 
         reply_content = 'We are the Knights Who Say ... Ni!'

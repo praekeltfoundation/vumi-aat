@@ -99,7 +99,8 @@ class AatUssdTransport(HttpRpcTransport):
                     'provider': provider,
                     'ussd_session_id': ussd_session_id,
                 }
-            }
+            },
+            provider=provider,
         )
 
     def generate_body(self, reply, callback, session_event):
