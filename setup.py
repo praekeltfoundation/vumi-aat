@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="vxaat",
-    version="0.5.1",
+    version="0.5.2a",
     url='http://github.com/praekelt/vumi-aat',
     license='BSD',
     description="An AAT USSD transport for Vumi.",
