@@ -13,10 +13,6 @@ setup(
     include_package_data=True,
     install_requires=[
         'vumi',
-        # We need a dev versions of the packags above, so they have to be
-        # installed before us. They're listed first so that we fail fast
-        # instead of working through all the other requirements before
-        # discovering that they aren't available should that be the case.
         'Twisted>=13.1.0',
     ],
     classifiers=[
