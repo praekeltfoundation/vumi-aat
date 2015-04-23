@@ -155,8 +155,14 @@ class AatUssdTransport(HttpRpcTransport):
 
         # Response failure
         if response_id is None:
-            yield self.publish_nack(message_id, self.RESPONSE_FAILURE_ERROR)
+            # we don't yield on this publish because if a message store is
+            # used, that causes the worker to wait for Riak before processing
+            # the message and responding to USSD messages is time critical.
+            self.publish_nack(message_id, self.RESPONSE_FAILURE_ERROR)
             return
 
-        yield self.publish_ack(user_message_id=message_id,
-                               sent_message_id=message_id)
+        # we don't yield on this publish because if a message store is
+        # used, that causes the worker to wait for Riak before processing
+        # the message and responding to USSD messages is time critical.
+        self.publish_ack(
+            user_message_id=message_id, sent_message_id=message_id)
