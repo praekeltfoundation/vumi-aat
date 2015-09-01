@@ -114,9 +114,7 @@ class TestAatUssdTransport(VumiTestCase):
     @inlineCallbacks
     def test_inbound_begin_with_different_provider(self):
         yield self.get_transport({
-            'provider_mappings': {
-                'Camelot': 'camelot'
-            }
+            'provider_mappings': {'Camelot': 'camelot'}
         })
         ussd_string = "*1234#"
 
