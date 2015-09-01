@@ -6,14 +6,19 @@ from twisted.internet.defer import inlineCallbacks
 from twisted.web import http
 
 from vumi.message import TransportUserMessage
-from vumi.config import ConfigText
+from vumi.config import ConfigText, ConfigDict
 from vumi.transports.httprpc import HttpRpcTransport
 from vumi import log
 
 
 class AatUssdTransportConfig(HttpRpcTransport.CONFIG_CLASS):
-    base_url = ConfigText('The base url of the transport ',
-                          required=True, static=True)
+    base_url = ConfigText(
+        'The base url of the transport',
+        required=True, static=True)
+    provider_mappings = ConfigDict(
+        'Mappings from the provider values received from aat to normalised '
+        'provider values',
+        static=True, default={})
 
 
 class AatUssdTransport(HttpRpcTransport):
@@ -32,6 +37,12 @@ class AatUssdTransport(HttpRpcTransport):
 
     CONFIG_CLASS = AatUssdTransportConfig
 
+    @inlineCallbacks
+    def setup_transport(self):
+        yield super(AatUssdTransport, self).setup_transport()
+        config = self.get_static_config()
+        self.provider_mappings = config.provider_mappings
+
     def get_callback_url(self, to_addr):
         config = self.get_static_config()
         return "%s%s?to_addr=%s" % (
@@ -49,9 +60,17 @@ class AatUssdTransport(HttpRpcTransport):
                 values[field] = None
         return values
 
+    def normalise_provider(self, provider):
+        if provider not in self.provider_mappings:
+            log.warning(
+                "No mapping exists for provider '%s', "
+                "using '%s' as a fallback" % (provider, provider,))
+            return provider
+        else:
+            return self.provider_mappings[provider]
+
     @inlineCallbacks
     def handle_raw_inbound_message(self, message_id, request):
-
         values, errors = self.get_field_values(
             request,
             self.EXPECTED_FIELDS,
@@ -71,7 +90,7 @@ class AatUssdTransport(HttpRpcTransport):
             return
 
         from_addr = values['msisdn']
-        provider = values['provider']
+        provider = self.normalise_provider(values['provider'])
         ussd_session_id = optional_values['ussdSessionId']
 
         if optional_values['to_addr'] is not None:
