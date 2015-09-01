@@ -7,6 +7,7 @@ from twisted.internet.defer import inlineCallbacks
 from vumi.message import TransportUserMessage
 from vumi.tests.helpers import VumiTestCase
 from vumi.transports.httprpc.tests.helpers import HttpRpcTransportHelper
+from vumi.tests.utils import LogCatcher
 
 from vxaat.ussd import AatUssdTransport
 
@@ -40,9 +41,8 @@ class TestAatUssdTransport(VumiTestCase):
 
     def assert_inbound_message(self, msg, **field_values):
         expected_field_values = {
-            'content':  "",
+            'content': "",
             'from_addr': self.tx_helper.request_defaults['msisdn'],
-            'provider': self.tx_helper.request_defaults['provider'],
         }
         expected_field_values.update(field_values)
         for field, expected_value in expected_field_values.iteritems():
@@ -113,7 +113,9 @@ class TestAatUssdTransport(VumiTestCase):
 
     @inlineCallbacks
     def test_inbound_begin_with_different_provider(self):
-        yield self.get_transport()
+        yield self.get_transport({
+            'provider_mappings': {'Camelot': 'camelot'}
+        })
         ussd_string = "*1234#"
 
         # Send initial request
@@ -125,7 +127,7 @@ class TestAatUssdTransport(VumiTestCase):
             session_event=TransportUserMessage.SESSION_NEW,
             to_addr=ussd_string,
             content=None,
-            provider="Camelot",
+            provider="camelot",
         )
 
         reply_content = 'We are the Knights Who Say ... Ni!'
@@ -141,6 +143,33 @@ class TestAatUssdTransport(VumiTestCase):
 
         [ack] = yield self.tx_helper.wait_for_dispatched_events(1)
         self.assert_ack(ack, reply)
+
+    @inlineCallbacks
+    def test_inbound_with_unknown_provider(self):
+        yield self.get_transport({
+            'provider_mappings': {'Camelot': 'camelot'}
+        })
+
+        ussd_string = "*1234#"
+
+        with LogCatcher() as lc:
+            d = self.tx_helper.mk_request(request=ussd_string, provider="Tim")
+            [msg] = yield self.tx_helper.wait_for_dispatched_inbound(1)
+
+        self.assertTrue(
+            "No mapping exists for provider 'Tim', using 'Tim' as a fallback"
+            in lc.messages())
+
+        self.assert_inbound_message(
+            msg,
+            session_event=TransportUserMessage.SESSION_NEW,
+            to_addr=ussd_string,
+            content=None,
+            provider="Tim",
+        )
+
+        self.tx_helper.dispatch_outbound(msg.reply("I... am an enchanter"))
+        yield d
 
     @inlineCallbacks
     def test_inbound_begin_with_close(self):
@@ -291,7 +320,9 @@ class TestAatUssdTransport(VumiTestCase):
 
     @inlineCallbacks
     def test_metadata_handled(self):
-        yield self.get_transport()
+        yield self.get_transport({
+            'provider_mappings': {'MTN': 'mtn'}
+        })
 
         ussd_session_id = 'xxxx'
         content = "*code#"
@@ -304,7 +335,7 @@ class TestAatUssdTransport(VumiTestCase):
             content=None,
             transport_metadata={
                 'aat_ussd': {
-                    'provider': 'MTN',
+                    'provider': 'mtn',
                     'ussd_session_id': ussd_session_id,
                 }
             }
