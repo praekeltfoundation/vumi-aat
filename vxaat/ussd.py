@@ -102,8 +102,8 @@ class AatUssdTransport(HttpRpcTransport):
             content = None
 
         self.log.info(
-            'AatUssdTransport receiving inbound message from %s to %s.' % (
-                from_addr, to_addr))
+            'AatUssdTransport receiving inbound message (%s) from %s to %s.'
+            % (message_id, from_addr, to_addr))
 
         yield self.publish_message(
             message_id=message_id,
@@ -154,8 +154,8 @@ class AatUssdTransport(HttpRpcTransport):
             self.get_callback_url(message['from_addr']),
             message['session_event']
         )
-        self.log.info('AatUssdTransport outbound message with content: %r'
-                      % (body,))
+        self.log.info('AatUssdTransport outbound message (%s) with content: %r'
+                      % (message_id, body,))
 
         # Errors
         if not message['content']:
