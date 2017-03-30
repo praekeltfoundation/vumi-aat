@@ -8,7 +8,6 @@ from twisted.web import http
 from vumi.message import TransportUserMessage
 from vumi.config import ConfigText, ConfigDict
 from vumi.transports.httprpc import HttpRpcTransport
-from vumi import log
 
 
 class AatUssdTransportConfig(HttpRpcTransport.CONFIG_CLASS):
@@ -62,7 +61,7 @@ class AatUssdTransport(HttpRpcTransport):
 
     def normalise_provider(self, provider):
         if provider not in self.provider_mappings:
-            log.warning(
+            self.log.warning(
                 "No mapping exists for provider '%s', "
                 "using '%s' as a fallback" % (provider, provider,))
             return provider
@@ -83,7 +82,7 @@ class AatUssdTransport(HttpRpcTransport):
         )
 
         if errors:
-            log.info('Unhappy incoming message: %s ' % (errors,))
+            self.log.info('Unhappy incoming message: %s ' % (errors,))
             yield self.finish_request(
                 message_id, json.dumps(errors), code=http.BAD_REQUEST
             )
@@ -102,7 +101,7 @@ class AatUssdTransport(HttpRpcTransport):
             to_addr = optional_values['request']
             content = None
 
-        log.info(
+        self.log.info(
             'AatUssdTransport receiving inbound message from %s to %s.' % (
                 from_addr, to_addr))
 
@@ -155,8 +154,8 @@ class AatUssdTransport(HttpRpcTransport):
             self.get_callback_url(message['from_addr']),
             message['session_event']
         )
-        log.info('AatUssdTransport outbound message with content: %r'
-                 % (body,))
+        self.log.info('AatUssdTransport outbound message with content: %r'
+                      % (body,))
 
         # Errors
         if not message['content']:
