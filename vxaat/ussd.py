@@ -112,6 +112,9 @@ class AatUssdTransport(HttpRpcTransport):
             from_addr=from_addr,
             session_event=session_event,
             transport_type=self.transport_type,
+            helper_metadata={
+                'session_id': ussd_session_id,
+            },
             transport_metadata={
                 'aat_ussd': {
                     'provider': provider,
